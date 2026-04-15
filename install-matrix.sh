@@ -59,32 +59,39 @@ echo
 # ==============================================================================
 step "Настройка параметров установки"
 
+# При запуске через curl | bash stdin занят телом скрипта.
+# Все read должны явно читать с терминала через /dev/tty.
+exec 3</dev/tty   # fd 3 → терминал, независимо от способа запуска
+
 # ── Домен ─────────────────────────────────────────────────────────────────────
 while true; do
-    read -rp "$(echo -e "${BOLD}Введите основной домен${RESET} (например: matrix.example.com): ")" MATRIX_DOMAIN
+    echo -ne "${BOLD}Введите основной домен${RESET} (например: matrix.example.com): "
+    read -r MATRIX_DOMAIN <&3
     [[ -n "$MATRIX_DOMAIN" ]] && break
     warn "Домен не может быть пустым"
 done
 
 # ── Email для Let's Encrypt ───────────────────────────────────────────────────
 while true; do
-    read -rp "$(echo -e "${BOLD}Email для Let's Encrypt${RESET} (уведомления об истечении сертификата): ")" LE_EMAIL
+    echo -ne "${BOLD}Email для Let's Encrypt${RESET} (уведомления об истечении сертификата): "
+    read -r LE_EMAIL <&3
     [[ "$LE_EMAIL" =~ ^[^@]+@[^@]+\.[^@]+$ ]] && break
     warn "Введите корректный email"
 done
 
 # ── Дополнительные субдомены ──────────────────────────────────────────────────
-# Element Web будет на element.<domain>, Admin UI на admin.<domain>
 ELEMENT_DOMAIN="element.${MATRIX_DOMAIN}"
 ADMIN_DOMAIN="admin.${MATRIX_DOMAIN}"
 
 # ── Имя сервера Matrix (server_name) ─────────────────────────────────────────
-read -rp "$(echo -e "${BOLD}Matrix server_name${RESET} [${MATRIX_DOMAIN}]: ")" MATRIX_SERVER_NAME
+echo -ne "${BOLD}Matrix server_name${RESET} [${MATRIX_DOMAIN}]: "
+read -r MATRIX_SERVER_NAME <&3
 MATRIX_SERVER_NAME="${MATRIX_SERVER_NAME:-$MATRIX_DOMAIN}"
 
 # ── Регистрация новых пользователей ──────────────────────────────────────────
 while true; do
-    read -rp "$(echo -e "${BOLD}Разрешить публичную регистрацию?${RESET} [y/N]: ")" REG_ANSWER
+    echo -ne "${BOLD}Разрешить публичную регистрацию?${RESET} [y/N]: "
+    read -r REG_ANSWER <&3
     REG_ANSWER="${REG_ANSWER:-N}"
     case "${REG_ANSWER^^}" in
         Y) ENABLE_REGISTRATION="true";  break ;;
@@ -114,7 +121,8 @@ echo -e "  server_name       : ${MATRIX_SERVER_NAME}"
 echo -e "  Let's Encrypt     : ${LE_EMAIL}"
 echo -e "  Регистрация       : ${ENABLE_REGISTRATION}"
 echo
-read -rp "$(echo -e "${BOLD}Начать установку? [y/N]:${RESET} ")" CONFIRM
+echo -ne "${BOLD}Начать установку? [y/N]:${RESET} "
+read -r CONFIRM <&3
 [[ "${CONFIRM^^}" == "Y" ]] || { info "Установка отменена"; exit 0; }
 
 # ==============================================================================
